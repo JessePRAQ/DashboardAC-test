@@ -4,17 +4,13 @@ import pandas as pd
 import geopandas as gpd
 from taipy.gui import Gui
 
-# ---------- Helpers ----------
-def format_nl(value, decimals=3):
-    """Formatteer numeriek met NL-notatie (punt=duizendtallen, komma=decimalen)."""
-    if value is None or pd.isna(value):
-        return "—"
-    s = f"{float(value):,.{decimals}f}"
-    return s.replace(",", "X").replace(".", ",").replace("X", ".")
-
 # ---------- Instellingen ----------
-GPKG_PATH = "C:\\Python\\Test Dashboard\\AC-gemiddelde-VB.gpkg"
+# Inladen data
+GPKG_PATH = os.path.join("Data", "AC-gemiddelde-VB.gpkg")
 MEETOBJECT_COL = "MeetobjectCode"
+
+if not os.path.exists(GPKG_PATH):
+    raise FileNotFoundError(f"GPKG-bestand niet gevonden op {GPKG_PATH}. Plaats het bestand in een 'data'-map.")
 
 # ---------- GeoPackage inlezen ----------
 try:
@@ -26,11 +22,8 @@ except Exception:
 gdf = gpd.read_file(GPKG_PATH, layer=layer_name)
 
 # Indien geen punten: gebruik centroid
-try:
-    if not gdf.geometry.geom_type.isin(["Point"]).all():
-        gdf["geometry"] = gdf.geometry.centroid
-except Exception:
-    pass
+if not gdf.geometry.geom_type.isin(["Point"]).all():
+    gdf["geometry"] = gdf.geometry.centroid
 
 # CRS naar WGS84
 try:
@@ -75,9 +68,16 @@ layout = {
     }
 }
 
+# ---------- Helpers ----------
+def format_nl(value, decimals=3):
+    """Formatteer numeriek met NL-notatie."""
+    if value is None or pd.isna(value):
+        return "—"
+    s = f"{float(value):,.{decimals}f}"
+    return s.replace(",", "X").replace(".", ",").replace("X", ".")
+
 # ---------- Functies ----------
 def _update_selected_values(state):
-    """Toon waarden van geselecteerd punt voor de gekozen stoffen."""
     if state.selected_points and state.gekozen_stoffen and len(state.df_stations) > 0:
         idx = state.selected_points[0]
         meetcode = state.df_stations.iloc[idx][MEETOBJECT_COL]
@@ -96,7 +96,6 @@ def _update_selected_values(state):
     else:
         state.selected_values_str = "Selecteer een meetpunt op de kaart of gebruik de zoekfunctie."
 
-# ---------- Acties ----------
 def _perform_search(state, term: str):
     term = (term or "").strip()
     if not term:
@@ -168,7 +167,7 @@ chart_style = {"width": "100%", "height": "80vh"}
 
 # ---------- Pagina ----------
 page = """
-# Hoi Hielke / Juriaan welkom op deze mooie webpagina!
+# Interactieve kaart: klik op een meetpunt en kies één of meerdere stoffen
 
 **Zoek meetpunt (MeetobjectCode):** <|{zoek_meetpunt}|input|label=MeetobjectCode|placeholder=Bijv. MO-123|> <|Zoeken|button|on_action=zoek_meetpunt_action|>
 **Stoffen:** <|{gekozen_stoffen}|selector|lov={stof_cols}|multiple|dropdown|>
@@ -186,5 +185,5 @@ page = """
 
 # ---------- Start ----------
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "10000"))
+    port = int(os.environ.get("PORT", "10000"))  # Render gebruikt deze poort
     Gui(page).run(host="0.0.0.0", port=port, use_reloader=False, title="AC meetpunten dashboard")
