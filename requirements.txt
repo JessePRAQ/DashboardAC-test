@@ -1,13 +1,7 @@
-
-# Web UI
-taipy==2.0.1
-
-# Data stack: pin to versions with manylinux wheels (no compile)
+taipy==3.1.1
 pandas==2.2.2
 numpy==1.26.4
 geopandas==0.14.3
 pyogrio==0.7.2
 shapely==2.0.4
-
-# (Optional but helpful for stability)
 pyyaml==6.0.2
